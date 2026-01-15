@@ -83,20 +83,68 @@ uv run uvicorn main:app --reload --port 8080
 └── pyproject.toml       # 项目依赖配置
 ```
 
+## 🧠 Agent 工作流架构
+
+```mermaid
+graph TD
+    %% 定义样式
+    classDef start fill:#f9f,stroke:#333,stroke-width:2px;
+    classDef process fill:#e1f5fe,stroke:#01579b,stroke-width:1px;
+    classDef parallel fill:#fff9c4,stroke:#fbc02d,stroke-width:1px,stroke-dasharray: 5 5;
+    classDef decision fill:#f0f4c3,stroke:#827717,stroke-width:1px;
+    classDef endNode fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px;
+
+    Start((用户输入)) --> ParallelInput{开始并行}
+    
+    subgraph ParallelProcessing [并行处理层]
+        direction LR
+        Research[🔍 实时调研节点<br/>DuckDuckGo Search] 
+        Skeleton[📋 方案骨架节点<br/>预算分配/主题]
+    end
+
+    ParallelInput --> Research
+    ParallelInput --> Skeleton
+    
+    Research --> Join[整合节点]
+    Skeleton --> Join
+    
+    Join --> Writer[✍️ 详细规划生成]
+    
+    Writer --> BudgetAudit{💰 预算审核}
+    BudgetAudit -- "不合规" --> Revise[🔄 调整方案]
+    Revise --> BudgetAudit
+    
+    BudgetAudit -- "通过" --> QualityAudit{✨ 内容润色}
+    
+    QualityAudit --> SSE[🌊 SSE 流式输出]
+    SSE --> EndNode((交付行程))
+
+    %% 应用样式
+    class Start start;
+    class EndNode endNode;
+    class Research,Skeleton parallel;
+    class Writer,Revise,Join process;
+    class BudgetAudit,QualityAudit decision;
+```
+
 ---
 
 ## 🧠 Agent 工作流详解
 
 本项目的 Agent 并非简单的 Prompt 拼接，而是基于有向无环图 (DAG) 的状态机：
 
-1.  **用户输入**: 接收目的地、预算、天数。
+1.  **用户输入**: 接收出发地、目的地、预算、时间。
 2.  **并行处理 (Parallel Node)**:
-    *   `Research Node`: 联网/知识库检索当地交通、景点、美食（极简 JSON 模式）。
-    *   `Draft Node`: 根据预算构建初步行程骨架和资金分配（极简 JSON 模式）。
-3.  **预算审核 (Conditional Edge)**: (预留节点) 检查预算是否合理。
-4.  **详细规划 (Writer Node)**: 整合调研数据和骨架，生成详尽的每日行程。
-5.  **润色 & 格式化 (Polish Node)**: 将结果转换为Markdown，并提取结构化预算数据。
-6.  **流式输出**: 通过 SSE 将 Markdown 块实时推送到前端。
+    *   `Research Node`: 实时联网检索最新的交通、景点、美食数据。
+    *   `Skeleton Node`: 同步构建初步预算分配和每日主题。
+3.  **详细规划 (Writer Node)**: 整合上述数据，生成详尽的每日行程。
+4.  **循环校验 (Self-Correction)**: 
+    *   `Budget Audit`: 检查总花费是否超标，不合格则打回重写。
+    *   `Quality Audit`: 审核文案吸引力与实用性。
+5.  **流式输出 (SSE)**: 最终方案通过 Server-Sent Events 实现毫秒级响应预览。
+
+---
+
 
 ---
 
