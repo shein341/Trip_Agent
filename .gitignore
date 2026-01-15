@@ -1,0 +1,16 @@
+# 敏感信息
+.env
+*.db
+
+# Python 缓存与环境
+__pycache__/
+.venv/
+.pytest_cache/
+*.pyc
+
+# IDE 设置
+.idea/
+.vscode/
+
+# 锁文件 (可选，如果用 uv 建议提交 uv.lock，如果是普通 pip 可不提交)
+# uv.lock

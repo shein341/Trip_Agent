@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI 驱动的智能旅行规划助手">
+  <title>✈️ 智能旅行规划师 | AI Travel Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <!-- Chart.js for pie chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+
+<body>
+  <!-- 动态背景 -->
+  <div class="bg-animation"></div>
+
+  <main class="container">
+    <!-- 标题 -->
+    <header class="header">
+      <h1>✈️ 智能旅行规划师</h1>
+      <p>告诉我您的预算和目的地，AI 为您定制完美行程</p>
+      <button class="btn btn-history" id="history-toggle-btn">
+        <span>📚</span> 历史记录
+      </button>
+    </header>
+
+    <!-- 历史记录侧边栏 -->
+    <aside class="history-sidebar" id="history-sidebar">
+      <div class="sidebar-header">
+        <h3>📚 历史记录</h3>
+        <button class="sidebar-close" id="sidebar-close">✕</button>
+      </div>
+      <div class="history-list" id="history-list">
+        <p class="history-empty">暂无历史记录</p>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- 输入表单 -->
+    <section class="glass-card" id="form-section">
+      <form id="travel-form">
+        <!-- 预算 -->
+        <div class="form-group full-width">
+          <label>
+            <span class="icon">💰</span> 旅行预算
+          </label>
+          <div class="budget-display">
+            <span class="budget-value" id="budget-display">5000</span>
+            <span class="budget-unit">元</span>
+          </div>
+          <input type="range" id="budget" name="budget" class="budget-slider" min="1000" max="50000" step="500"
+            value="5000">
+        </div>
+
+        <div class="form-grid">
+          <!-- 出发地 -->
+          <div class="form-group">
+            <label>
+              <span class="icon">🏠</span> 出发地
+            </label>
+            <input type="text" id="departure" name="departure" placeholder="例如：北京、上海、广州..." required>
+          </div>
+
+          <!-- 目的地 -->
+          <div class="form-group">
+            <label>
+              <span class="icon">📍</span> 目的地
+            </label>
+            <input type="text" id="destination" name="destination" placeholder="例如：杭州、三亚、成都..." required>
+          </div>
+
+          <!-- 开始日期 -->
+          <div class="form-group">
+            <label>
+              <span class="icon">📅</span> 出发日期
+            </label>
+            <input type="date" id="start-date" name="start_date" required>
+          </div>
+
+          <!-- 结束日期 -->
+          <div class="form-group">
+            <label>
+              <span class="icon">🏁</span> 返程日期
+            </label>
+            <input type="date" id="end-date" name="end_date" required>
+          </div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="error-message" id="error-message"></div>
+
+        <!-- 提交按钮 -->
+        <div class="form-group full-width" style="margin-top: 1.5rem;">
+          <button type="submit" class="btn btn-primary" id="submit-btn">
+            <span class="btn-icon">🚀</span>
+            <span>生成旅行规划</span>
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 加载状态 - 增强版 -->
+    <section class="glass-card loading-container" id="loading-section">
+      <!-- 飞机绕地球动画 - 可点击解压 -->
+      <div class="orbit-loader">
+        <div class="orbit-globe" id="clickable-globe" title="点击地球解压！">🌍</div>
+        <div class="orbit-plane">✈️</div>
+        <div class="orbit-ring"></div>
+        <!-- 点击计数器 -->
+        <div class="click-counter" id="click-counter">
+          <span class="counter-value" id="counter-value">0</span>
+          <span class="counter-label">次点击</span>
+        </div>
+        <!-- 点击特效容器 -->
+        <div class="click-effects" id="click-effects"></div>
+      </div>
+
+      <!-- 步骤进度 - 包含内容审核 -->
+      <div class="loading-steps">
+        <div class="step active" id="step-1">
+          <div class="step-dot"></div>
+          <span>🔍 调研</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step-2">
+          <div class="step-dot"></div>
+          <span>📋 方案</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step-3">
+          <div class="step-dot"></div>
+          <span>💰 预算</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step-4">
+          <div class="step-dot"></div>
+          <span>✨ 行程</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step" id="step-5">
+          <div class="step-dot"></div>
+          <span>📝 润色</span>
+        </div>
+      </div>
+
+      <p class="loading-status" id="loading-status">AI 正在调研目的地信息...</p>
+      <p class="loading-hint">💡 点击地球解压哦~</p>
+    </section>
+
+    <!-- 结果展示 - 增强版 -->
+    <section class="glass-card result-container" id="result-section">
+      <div class="result-header">
+        <h2>🎉 您的专属行程</h2>
+        <button class="btn btn-new" id="new-plan-btn">
+          <span>📝</span> 重新规划
+        </button>
+      </div>
+
+      <!-- 预算饼状图 -->
+      <div class="budget-chart-container">
+        <div class="chart-wrapper">
+          <canvas id="budget-chart"></canvas>
+        </div>
+        <div class="chart-legend" id="chart-legend"></div>
+      </div>
+
+      <!-- 行程内容 -->
+      <div class="result-content" id="result-content"></div>
+
+      <!-- AI 对话修改区 -->
+      <div class="chat-section">
+        <h3>💬 想修改方案？告诉 AI</h3>
+        <div class="chat-input-wrapper">
+          <input type="text" id="chat-input" placeholder="例如：增加美食体验、减少购物时间、换一家酒店..." class="chat-input">
+          <button class="btn btn-chat" id="chat-send-btn">
+            <span>发送</span>
+          </button>
+        </div>
+        <div class="chat-loading" id="chat-loading">
+          <span class="chat-spinner"></span>
+          <span>AI 正在修改方案...</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    // 元素引用
+    const form = document.getElementById('travel-form');
+    const formSection = document.getElementById('form-section');
+    const loadingSection = document.getElementById('loading-section');
+    const resultSection = document.getElementById('result-section');
+    const resultContent = document.getElementById('result-content');
+    const errorMessage = document.getElementById('error-message');
+    const budgetSlider = document.getElementById('budget');
+    const budgetDisplay = document.getElementById('budget-display');
+    const newPlanBtn = document.getElementById('new-plan-btn');
+    const chatInput = document.getElementById('chat-input');
+    const chatSendBtn = document.getElementById('chat-send-btn');
+    const chatLoading = document.getElementById('chat-loading');
+    const loadingStatus = document.getElementById('loading-status');
+
+    // 当前方案数据
+    let currentPlan = '';
+    let currentBudget = 5000;
+    let currentDestination = '';
+    let budgetChart = null;
+
+    // 设置默认日期
+    const today = new Date();
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() + 7);
+    const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + 10);
+
+    document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
+    document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
+
+    // 预算滑块更新
+    budgetSlider.addEventListener('input', (e) => {
+      budgetDisplay.textContent = parseInt(e.target.value).toLocaleString();
+    });
+
+    // ========== 点击地球解压游戏 ==========
+    let clickCount = 0;
+    const clickableGlobe = document.getElementById('clickable-globe');
+    const counterValue = document.getElementById('counter-value');
+    const clickEffects = document.getElementById('click-effects');
+
+    clickableGlobe.addEventListener('click', (e) => {
+      clickCount++;
+      counterValue.textContent = clickCount;
+
+      // 地球缩放动画
+      clickableGlobe.style.transform = 'scale(1.3)';
+      setTimeout(() => {
+        clickableGlobe.style.transform = 'scale(1)';
+      }, 150);
+
+      // 创建 +1 特效
+      const effect = document.createElement('div');
+      effect.className = 'click-effect';
+      effect.textContent = '+1';
+      effect.style.left = `${Math.random() * 60 + 20}%`;
+      clickEffects.appendChild(effect);
+
+      // 移除特效
+      setTimeout(() => effect.remove(), 1000);
+
+      // 每10次显示彩蛋
+      if (clickCount % 10 === 0) {
+        const emojis = ['🎉', '⭐', '🚀', '💫', '✨'];
+        const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+        const bonus = document.createElement('div');
+        bonus.className = 'click-effect bonus';
+        bonus.textContent = emoji;
+        bonus.style.left = '50%';
+        clickEffects.appendChild(bonus);
+        setTimeout(() => bonus.remove(), 1500);
+      }
+    });
+
+    // ========== 加载步骤动画 (5 步) ==========
+    const loadingSteps = [
+      { id: 'step-1', text: 'AI 正在调研目的地信息...', delay: 0 },
+      { id: 'step-2', text: 'AI 正在制定初步方案...', delay: 6000 },
+      { id: 'step-3', text: 'AI 正在进行预算审核...', delay: 12000 },
+      { id: 'step-4', text: 'AI 正在生成详细行程...', delay: 18000 },
+      { id: 'step-5', text: 'AI 正在润色优化文案...', delay: 24000 }
+    ];
+
+    let stepTimeouts = [];
+
+    function startLoadingAnimation() {
+      // 重置点击计数
+      clickCount = 0;
+      counterValue.textContent = '0';
+
+      // 重置所有步骤
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active', 'done'));
+      document.getElementById('step-1').classList.add('active');
+      loadingStatus.textContent = loadingSteps[0].text;
+
+      // 设置步骤动画
+      loadingSteps.slice(1).forEach((step, index) => {
+        const timeout = setTimeout(() => {
+          document.getElementById(loadingSteps[index].id).classList.remove('active');
+          document.getElementById(loadingSteps[index].id).classList.add('done');
+          document.getElementById(step.id).classList.add('active');
+          loadingStatus.textContent = step.text;
+        }, step.delay);
+        stepTimeouts.push(timeout);
+      });
+    }
+
+    function stopLoadingAnimation() {
+      stepTimeouts.forEach(t => clearTimeout(t));
+      stepTimeouts = [];
+    }
+
+    // 表单提交
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMessage.classList.remove('active');
+
+      const data = {
+        budget: parseInt(budgetSlider.value),
+        departure: document.getElementById('departure').value.trim(),
+        destination: document.getElementById('destination').value.trim(),
+        start_date: document.getElementById('start-date').value,
+        end_date: document.getElementById('end-date').value
+      };
+
+      currentBudget = data.budget;
+      currentDestination = data.destination;
+
+      if (new Date(data.end_date) <= new Date(data.start_date)) {
+        showError('返程日期必须晚于出发日期');
+        return;
+      }
+
+      formSection.style.display = 'none';
+      loadingSection.classList.add('active');
+      resultSection.classList.remove('active');
+      resultContent.innerHTML = ''; // 清空内容准备流式显示
+      startLoadingAnimation();
+
+      // 使用 SSE 流式输出
+      const params = new URLSearchParams({
+        budget: data.budget,
+        departure: data.departure,
+        destination: data.destination,
+        start_date: data.start_date,
+        end_date: data.end_date
+      });
+
+      const eventSource = new EventSource(`/travel-plan-stream?${params}`);
+      let streamContent = '';
+
+      eventSource.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+
+          if (msg.type === 'status') {
+            // 更新步骤进度
+            stopLoadingAnimation();
+            for (let i = 1; i <= 5; i++) {
+              const stepEl = document.getElementById(`step-${i}`);
+              stepEl.classList.remove('active', 'done');
+              if (i < msg.step) stepEl.classList.add('done');
+              else if (i === msg.step) stepEl.classList.add('active');
+            }
+            loadingStatus.textContent = msg.message;
+          }
+          else if (msg.type === 'chunk') {
+            // 打字机效果 - 实时显示内容
+            streamContent += msg.content;
+            // 切换到结果页面显示
+            if (loadingSection.classList.contains('active')) {
+              loadingSection.classList.remove('active');
+              resultSection.classList.add('active');
+            }
+            resultContent.innerHTML = formatMarkdown(streamContent);
+            // 滚动到底部
+            resultContent.scrollTop = resultContent.scrollHeight;
+          }
+          else if (msg.type === 'done') {
+            currentPlan = msg.content;
+          }
+          else if (msg.type === 'budget') {
+            renderBudgetChart(msg.breakdown);
+          }
+          else if (msg.type === 'saved') {
+            console.log('Plan saved with ID:', msg.plan_id);
+            loadHistory(); // 刷新历史记录
+            eventSource.close();
+          }
+        } catch (err) {
+          console.error('SSE parse error:', err);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('SSE error:', error);
+        eventSource.close();
+        stopLoadingAnimation();
+        loadingSection.classList.remove('active');
+        formSection.style.display = 'block';
+        showError('连接中断，请重试');
+      };
+    });
+
+    // 前端预算分解（备用）
+    function extract_budget_breakdown(totalBudget) {
+      return [
+        { category: "🚗 交通", amount: Math.round(totalBudget * 0.30), color: "#6366f1" },
+        { category: "🏨 住宿", amount: Math.round(totalBudget * 0.35), color: "#8b5cf6" },
+        { category: "🍜 餐饮", amount: Math.round(totalBudget * 0.15), color: "#f472b6" },
+        { category: "🎫 门票", amount: Math.round(totalBudget * 0.12), color: "#22d3ee" },
+        { category: "🛍️ 其他", amount: Math.round(totalBudget * 0.08), color: "#fbbf24" }
+      ];
+    }
+
+    // 重新规划
+    newPlanBtn.addEventListener('click', () => {
+      resultSection.classList.remove('active');
+      formSection.style.display = 'block';
+      if (budgetChart) {
+        budgetChart.destroy();
+        budgetChart = null;
+      }
+    });
+
+    // ========== 历史记录功能 ==========
+    const historySidebar = document.getElementById('history-sidebar');
+    const historyList = document.getElementById('history-list');
+    const historyToggleBtn = document.getElementById('history-toggle-btn');
+    const sidebarClose = document.getElementById('sidebar-close');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+    historyToggleBtn.addEventListener('click', () => {
+      historySidebar.classList.add('open');
+      sidebarOverlay.classList.add('active');
+      loadHistory();
+    });
+
+    sidebarClose.addEventListener('click', closeHistorySidebar);
+    sidebarOverlay.addEventListener('click', closeHistorySidebar);
+
+    function closeHistorySidebar() {
+      historySidebar.classList.remove('open');
+      sidebarOverlay.classList.remove('active');
+    }
+
+    async function loadHistory() {
+      try {
+        const response = await fetch('/history?limit=20');
+        const result = await response.json();
+
+        if (result.success && result.history.length > 0) {
+          historyList.innerHTML = result.history.map(record => `
+            <div class="history-item" data-id="${record.id}">
+              <div class="history-info">
+                <span class="history-dest">📍 ${record.destination}</span>
+                <span class="history-date">${record.start_date} ~ ${record.end_date}</span>
+                <span class="history-budget">💰 ${record.budget.toLocaleString()} 元</span>
+              </div>
+              <div class="history-actions">
+                <button class="btn-load" onclick="loadPlan(${record.id})">查看</button>
+                <button class="btn-delete" onclick="deletePlan(${record.id})">删除</button>
+              </div>
+            </div>
+          `).join('');
+        } else {
+          historyList.innerHTML = '<p class="history-empty">暂无历史记录</p>';
+        }
+      } catch (error) {
+        console.error('加载历史记录失败:', error);
+      }
+    }
+
+    // 全局函数：加载历史方案
+    window.loadPlan = async function (planId) {
+      try {
+        const response = await fetch(`/history/${planId}`);
+        const result = await response.json();
+
+        if (result.success) {
+          const record = result.record;
+          currentPlan = record.plan_content;
+          currentBudget = record.budget;
+          currentDestination = record.destination;
+
+          resultContent.innerHTML = formatMarkdown(record.plan_content);
+          renderBudgetChart(extract_budget_breakdown(record.budget));
+
+          formSection.style.display = 'none';
+          loadingSection.classList.remove('active');
+          resultSection.classList.add('active');
+          closeHistorySidebar();
+        }
+      } catch (error) {
+        console.error('加载方案失败:', error);
+      }
+    };
+
+    // 全局函数：删除方案
+    window.deletePlan = async function (planId) {
+      console.log('删除方案 ID:', planId);
+
+      if (!window.confirm('确定要删除这条记录吗？')) {
+        console.log('用户取消删除');
+        return;
+      }
+
+      try {
+        console.log('发送删除请求...');
+        const response = await fetch(`/history/${planId}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        console.log('响应状态:', response.status);
+        const result = await response.json();
+        console.log('删除结果:', result);
+
+        if (result.success) {
+          alert('删除成功！');
+          loadHistory(); // 刷新列表
+        } else {
+          alert('删除失败: ' + (result.message || '未知错误'));
+        }
+      } catch (error) {
+        console.error('删除失败:', error);
+        alert('删除请求失败: ' + error.message);
+      }
+    };
+
+    // AI 对话修改
+    chatSendBtn.addEventListener('click', sendChatModify);
+    chatInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendChatModify();
+    });
+
+    async function sendChatModify() {
+      const message = chatInput.value.trim();
+      if (!message) return;
+
+      chatInput.disabled = true;
+      chatSendBtn.disabled = true;
+      chatLoading.classList.add('active');
+
+      try {
+        const response = await fetch('/chat-modify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            current_plan: currentPlan,
+            user_message: message,
+            budget: currentBudget,
+            destination: currentDestination
+          })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          currentPlan = result.modified_plan;
+          resultContent.innerHTML = formatMarkdown(result.modified_plan);
+          renderBudgetChart(result.budget_breakdown);
+          chatInput.value = '';
+        } else {
+          alert('修改失败：' + (result.message || '请重试'));
+        }
+      } catch (error) {
+        alert('请求失败：' + error.message);
+      } finally {
+        chatInput.disabled = false;
+        chatSendBtn.disabled = false;
+        chatLoading.classList.remove('active');
+      }
+    }
+
+    // 渲染预算饼图
+    function renderBudgetChart(breakdown) {
+      const ctx = document.getElementById('budget-chart').getContext('2d');
+
+      if (budgetChart) {
+        budgetChart.destroy();
+      }
+
+      const labels = breakdown.map(b => b.category);
+      const data = breakdown.map(b => b.amount);
+      const colors = breakdown.map(b => b.color);
+
+      budgetChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: data,
+            backgroundColor: colors,
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            borderWidth: 2,
+            hoverOffset: 10
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '65%',
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+              padding: 12,
+              displayColors: true,
+              callbacks: {
+                label: (ctx) => ` ${ctx.parsed.toLocaleString()} 元`
+              }
+            }
+          },
+          animation: {
+            animateRotate: true,
+            animateScale: true
+          }
+        }
+      });
+
+      // 渲染图例
+      const legendContainer = document.getElementById('chart-legend');
+      legendContainer.innerHTML = breakdown.map(b => `
+        <div class="legend-item">
+          <span class="legend-color" style="background: ${b.color}"></span>
+          <span class="legend-label">${b.category}</span>
+          <span class="legend-value">${b.amount.toLocaleString()}元</span>
+        </div>
+      `).join('');
+    }
+
+    // 显示错误
+    function showError(message) {
+      errorMessage.textContent = '❌ ' + message;
+      errorMessage.classList.add('active');
+    }
+
+    // ========== 增强 Markdown 格式化（支持表格）==========
+    function formatMarkdown(text) {
+      // 先处理表格
+      text = formatTables(text);
+
+      return text
+        // 标题
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        // 粗体
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        // 列表项美化
+        .replace(/^- (.+)$/gm, '<div class="list-item">$1</div>')
+        // 换行
+        .replace(/\n/g, '<br>');
+    }
+
+    // 表格转 HTML
+    function formatTables(text) {
+      const lines = text.split('\n');
+      let result = [];
+      let inTable = false;
+      let tableRows = [];
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        // 检测表格行（以 | 开头和结尾）
+        if (line.startsWith('|') && line.endsWith('|')) {
+          // 跳过分隔行 (|---|---|)
+          if (line.match(/^\|[\s:-]+\|$/)) {
+            continue;
+          }
+
+          if (!inTable) {
+            inTable = true;
+            tableRows = [];
+          }
+
+          // 解析单元格
+          const cells = line.slice(1, -1).split('|').map(c => c.trim());
+          tableRows.push(cells);
+        } else {
+          // 结束表格
+          if (inTable) {
+            result.push(renderTable(tableRows));
+            inTable = false;
+            tableRows = [];
+          }
+          result.push(line);
+        }
+      }
+
+      // 处理末尾的表格
+      if (inTable) {
+        result.push(renderTable(tableRows));
+      }
+
+      return result.join('\n');
+    }
+
+    // 渲染表格为美观的卡片
+    function renderTable(rows) {
+      if (rows.length === 0) return '';
+
+      let html = '<div class="styled-table">';
+
+      rows.forEach((row, index) => {
+        const isHeader = index === 0;
+        html += `<div class="table-row ${isHeader ? 'header-row' : ''}">`;
+        row.forEach(cell => {
+          html += `<div class="table-cell">${cell}</div>`;
+        });
+        html += '</div>';
+      });
+
+      html += '</div>';
+      return html;
+    }
+  </script>
+</body>
+
+</html>
