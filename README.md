@@ -85,11 +85,6 @@ uv run uvicorn main:app --reload --port 8080
 
 ## 🧠 Agent 工作流架构
 
-![Agent Workflow](docs/images/workflow_agent.png)
-
-<details>
-<summary>点击查看 Mermaid 源代码</summary>
-
 ```mermaid
 graph TD
     %% 定义样式
@@ -131,7 +126,6 @@ graph TD
     class Writer,Revise,Join process;
     class BudgetAudit,QualityAudit decision;
 ```
-</details>
 
 ---
 
